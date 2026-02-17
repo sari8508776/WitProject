@@ -113,3 +113,30 @@ class WitManager:
         shutil.copytree(target, self.temp_dir)
 
         print(f"Checked out commit {commit_id}")
+def status(self):
+    ignored_items = self.get_witignore()
+    last_commit_path = self.get_last_commit_path()
+
+    # כל הקבצים ב-temp (staging)
+    staged_files = [p.relative_to(self.temp_dir) for p in self.temp_dir.rglob("*") if p.is_file() and p.name not in ignored_items]
+
+    # אם אין staging ואין שינוי מאז הקומיט האחרון
+    if not staged_files and (last_commit_path is None or self.compare_folders(last_commit_path, self.temp_dir)):
+        return "nothing to commit, working tree clean"
+
+    # יש קבצים ב-staging ושונה מהקומיט האחרון
+    if staged_files and (last_commit_path is None or not self.compare_folders(last_commit_path, self.temp_dir)):
+        return f"Changes to be committed: {[str(f) for f in staged_files]}"
+
+    # בדיקה של קבצים ששונו ב-working אבל לא ב-staging
+    modified_files = []
+    for f in self.working_path.rglob("*"):
+        if f.is_file() and f.name not in ignored_items:
+            staged_file = self.temp_dir / f.relative_to(self.working_path)
+            if staged_file.exists() and file_hash(f) != file_hash(staged_file):
+                modified_files.append(str(f.relative_to(self.working_path)))
+
+    if modified_files:
+        return f"Changes not staged for commit: {modified_files}"
+
+    return "No changes tracked"
