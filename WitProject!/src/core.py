@@ -3,7 +3,8 @@ import shutil
 from pathlib import Path
 import hashlib
 import time
-"""
+
+O_ = """
 import os
 import shutil
 from pathlib import Path
@@ -134,7 +135,6 @@ class WitManager:
 """
 
 
-
 class WitManager:
     def __init__(self, path):
         self.working_path = Path(path).absolute()
@@ -149,9 +149,19 @@ class WitManager:
         if os.name == 'nt':
             os.system(f'attrib +h "{self.wit_path}"')
         print(f"Initialized .wit at {self.wit_path}")
-
+###
+    def get_witignore(self):
+        ignore_file = self.working_path / ".witignore"
+        ignored = [".wit"]  # תמיד להתעלם מהתיקיה .wit
+        if ignore_file.exists():
+            with open(ignore_file, "r") as f:
+                ignored += [line.strip() for line in f if line.strip()]
+        return ignored
+###
     def add(self, path_str):
-        ignored_items = [".wit", ".witignore"]
+        ###
+        ignored_items =     ignored_items = self.get_witignore()
+###
         os.makedirs(self.temp_dir, exist_ok=True)
         if path_str == ".":
             for item in os.listdir(self.working_path):
@@ -213,7 +223,45 @@ def file_hash(path):
 
 
 def status(self):
-    ignored_items = [".wit", ".witignore"]
+    ignored_items = self.get_witignore()
+    last_commit_path = self.get_last_commit_path()
+
+    # קבצים ב-staging
+    staged_files = {p.relative_to(self.temp_dir) for p in self.temp_dir.rglob("*") if
+                    p.is_file()} if self.temp_dir.exists() else set()
+
+    # קבצים בקומיט האחרון
+    committed_files = {p.relative_to(last_commit_path) for p in last_commit_path.rglob("*") if
+                       p.is_file()} if last_commit_path else set()
+
+    # קבצים ב-working directory (בלי קבצים שמתעלמים מהם)
+    working_files = {p.relative_to(self.working_path) for p in self.working_path.rglob("*") if
+                     p.is_file() and p.name not in ignored_items}
+
+    # untracked = קבצים ב-working שלא ב-staging ולא בקומיט האחרון
+    untracked_files = working_files - staged_files - committed_files
+
+    result = []
+    if staged_files - committed_files:
+        result.append("Changes to be committed: " + ", ".join(str(f) for f in staged_files - committed_files))
+    if (working_files & committed_files) - staged_files:
+        result.append("Changes not staged for commit: " + ", ".join(
+            str(f) for f in (working_files & committed_files) - staged_files))
+    if untracked_files:
+        result.append("Untracked files: " + ", ".join(str(f) for f in untracked_files))
+    if not result:
+        result.append("Nothing to commit, working tree clean")
+
+    return "\n".join(result)
+
+
+"""
+class WitManager:
+    def __init__(self, path):"
+def status(self):
+    ###
+    ignored_items = self.get_witignore()
+    ###
     last_commit_path = self.get_last_commit_path()
 
     if not any(self.temp_dir.iterdir()) and (
@@ -232,11 +280,16 @@ def status(self):
                 return f"Changes not staged for commit: {list_files2}"
 
     return "No changes tracked"
-
+"""
 
 def checkout(self, commit_id):
     target_commit_path = self.commit_dir / commit_id
-
+    ####
+    last_commit_path = self.get_last_commit_path()
+    if self.temp_dir.exists() and (not last_commit_path or not self.compare_folders(last_commit_path, self.temp_dir)):
+        print("Error: You have uncommitted changes. Commit before checkout.")
+        return
+    ####
     if not target_commit_path.exists():
         print(f"Error: Commit {commit_id} not found.")
         return
