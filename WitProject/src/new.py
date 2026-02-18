@@ -169,6 +169,56 @@ class WitManager:
     # ---------- Checkout ----------
     def checkout(self, commit_id):
         target = self.commit_dir / commit_id
+        if not target.exists():
+            print(f"Error: Commit {commit_id} not found.")
+            return False
+
+        ignored_items = self.get_witignore()
+
+        # Block checkout אם יש שינויים לא מועלים ב-working directory לעומת staging
+        if self.temp_dir.exists():
+            for p in self.working_path.rglob("*"):
+                if not p.is_file():
+                    continue
+                rel = p.relative_to(self.working_path)
+                if _is_ignored(rel, ignored_items):
+                    continue
+                staged_file = self.temp_dir / rel
+                if staged_file.exists() and file_hash(p) != file_hash(staged_file):
+                    print("Error: You have uncommitted changes. Commit before checkout.")
+                    return False
+
+        # ניקוי working directory מכל הקבצים (חוץ מ-.wit)
+        for item in self.working_path.iterdir():
+            if item.name == ".wit":
+                continue
+            if item.is_file():
+                item.unlink()
+            else:
+                shutil.rmtree(item)
+
+        # העתקת כל הקבצים מהקומיט המבוקש ל-working directory
+        for src in target.rglob("*"):
+            rel = src.relative_to(target)
+            if src.is_file():
+                dst = self.working_path / normalize_path(rel)
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+            elif src.is_dir():
+                dst = self.working_path / normalize_path(rel)
+                dst.mkdir(parents=True, exist_ok=True)
+
+        # ריענון staging כדי שישקף את הקומיט החדש
+        if self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
+        shutil.copytree(target, self.temp_dir)
+
+        print(f"Checked out commit {commit_id}")
+        return True
+
+    """
+    def checkout(self, commit_id):
+        target = self.commit_dir / commit_id
         last_commit = self.get_last_commit_path()
 
         # Block checkout if there are uncommitted changes in the working tree.
@@ -222,6 +272,9 @@ class WitManager:
 
         print(f"Checked out commit {commit_id}")
         return True
+
+
+"""
 
     # ---------- Status ----------
     def status(self):

@@ -134,7 +134,7 @@ class WitManager:
 
 """
 
-
+"""
 class WitManager:
     def __init__(self, path):
         self.working_path = Path(path).absolute()
@@ -256,6 +256,7 @@ def status(self):
 
 
 """
+"""
 class WitManager:
     def __init__(self, path):"
 def status(self):
@@ -281,7 +282,7 @@ def status(self):
 
     return "No changes tracked"
 """
-
+"""
 def checkout(self, commit_id):
     target_commit_path = self.commit_dir / commit_id
     ####
@@ -321,7 +322,7 @@ def checkout(self, commit_id):
 
 
 
-
+"""
 
 
 
