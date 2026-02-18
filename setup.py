@@ -1,16 +1,18 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name="wit",
     version="0.1",
-    packages=find_packages("WitProject/src"),  # חיפוש מודולים בתיקיית src
-    package_dir={"": "WitProject/src"},        # src היא תיקיית הבסיס למודולים
+    # The source Python modules live in WitProject/src as top-level modules (cli.py, new.py, ui.py, core.py)
+    py_modules=["cli", "new", "ui", "core"],
+    package_dir={"": "WitProject/src"},
     install_requires=[
-        "click",
+        "click>=8.0",
     ],
     entry_points={
         "console_scripts": [
-            "wit=cli:main",  # main() בקובץ cli.py
+            "wit=cli:main",  # 호출 מפונקציית main() בקובץ cli.py
         ],
     },
+    python_requires=">=3.8",
 )
